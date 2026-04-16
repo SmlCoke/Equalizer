@@ -1,0 +1,9 @@
+# Results and Outputs 
+results/
+result/
+
+# Data files
+*.mat
+
+# AI session
+docs/ai/
