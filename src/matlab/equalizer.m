@@ -184,3 +184,4 @@ title('Signal Distribution');
 grid on ;
 hold off;
 
+save("example_data.mat", "data0", "data1", "data2", "data3", "data4");
