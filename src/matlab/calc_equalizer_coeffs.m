@@ -14,12 +14,12 @@ clear;
 mpc = [1, 0.9, 0.8];
 
 % 均衡器抽头数
-N_tap = 17;
+N_tap = 11;
 
 % 求解方式选择
 % "causal_zf": 因果迫零（课堂推导一致）
 % "ls":        全长度最小二乘（可设 delay）
-solve_mode = "causal_zf";
+solve_mode = "ls";
 
 % 仅在 solve_mode="ls" 时生效
 decision_delay = 0; % 单位: sample，合法范围 [0, N_tap+length(mpc)-2]
@@ -79,8 +79,8 @@ h_opt = h_opt_col';
 % 计算卷积结果，观察主抽头位置外的残余 ISI 能量
 combined = conv(mpc, h_opt);
 
-% 使用 fi 对 h_opt 的系数进行定点量化: 1 sign + 1 int + 6 frac = 8 bit total
-h_opt_scale = fi(h_opt, 1, 8, 6);
+% 使用 fi 对 h_opt 的系数进行定点量化: 1 sign + 2 int + 5 frac = 8 bit total
+h_opt_scale = fi(h_opt, 1, 8, 5);
 
 % 输出结果
 disp("----------------------------------------------");
@@ -90,6 +90,8 @@ disp(["N_tap      = ", num2str(N_tap)]);
 disp(["channel     = [", num2str(mpc), "]"]);
 disp("h_opt =");
 disp(h_opt);
+disp("h_opt_scale =");
+disp(h_opt_scale)
 disp("combined response conv(mpc, h_opt) =");
 disp(combined);
 
@@ -101,7 +103,7 @@ disp(["residual ISI energy = ", num2str(isi_energy)]);
 disp("----------------------------------------------");
 
 % 可视化
-figure;
+fig_eq = figure;
 
 % (1) 均衡器系数 h_opt
 subplot(2,1,1);
@@ -119,6 +121,55 @@ xlabel('sample index');
 ylabel('amplitude');
 grid on;
 
+% ----------------- 图片导出 ----------------
+fig_dir = fullfile('results', 'figures', sprintf('tab%d_%s', N_tap, solve_mode));
+if ~exist(fig_dir, 'dir')
+	mkdir(fig_dir);
+end
+
+eq_svg_path = fullfile(fig_dir, 'equalizer.svg');
+drawnow;
+
+try
+	exportgraphics(fig_eq, eq_svg_path, 'ContentType', 'vector');
+catch
+	saveas(fig_eq, eq_svg_path);
+end
+
+disp(['figure saved: ', eq_svg_path]);
+
 % 8) 可选保存，便于 equalizer.m 直接 load 使用
 save('equalizer_coeffs.mat', 'h_opt', 'N_tap', 'h_opt_scale', 'solve_mode');
+
+% 9) 导出系数到 txt（十进制 + 定点二进制）
+script_fullpath = mfilename('fullpath');
+if isempty(script_fullpath)
+	script_dir = pwd;
+else
+	script_dir = fileparts(script_fullpath);
+end
+
+% 创建 results 目录（如果不存在）用于保存 csv 文件
+results_dir = fullfile(script_dir, 'results', 'coeffs');
+if ~exist(results_dir, 'dir')
+	mkdir(results_dir);
+end
+
+% csv 文件名和路径
+csv_name = sprintf('coeffs_%d_%s.csv', N_tap, solve_mode);
+csv_path = fullfile(results_dir, csv_name);
+
+% 收集滤波器系数
+h_opt_col = h_opt(:);
+h_opt_scale_col = h_opt_scale(:);
+% 将定点量化结果转换为二进制字符串
+bin_mat = bin(h_opt_scale_col);
+tap_index = (0:N_tap-1)';
+h_opt_scale_binary = cellstr(bin_mat);
+% 创建表格并保存为 csv文件
+coeff_table = table(tap_index, h_opt_col, double(h_opt_scale_col), h_opt_scale_binary, ...
+	'VariableNames', {'tap_index', 'h_opt_decimal', 'h_opt_scale_decimal', 'h_opt_scale_binary'});
+
+writetable(coeff_table, csv_path);
+disp(['coefficients csv saved: ', csv_path]);
 

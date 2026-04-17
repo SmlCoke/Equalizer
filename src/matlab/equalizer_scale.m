@@ -1,4 +1,4 @@
-% ------------- Equalizer MATLAB Model -------------
+% ------------- Equalizer MATLAB Scale Model -------------
 % this model simulates the performance of equalizer in multi-path channel, 
 % and compares the BER with and without equalization filter.
 % --------------------------------------------------
@@ -87,10 +87,30 @@ for cnt = 1:length(ebn0)
         awgn = randn(1,length(data2)).*attn;
         data3 = data2 + awgn;
 
-        % ---------------- Step 5. 均衡滤波器处理 ----------------
-        % 使用量化后的系数值，但在 double 域滤波，避免 fi/filter 对输入类型的严格要求
-        h = double(h_opt);
-        data4 = filter(h, 1, data3);
+        % ---------------- Step 5. 均衡滤波器处理（定点） ----------------
+        % 信道与噪声保持浮点仿真，仅均衡器按定点执行
+        if ~exist('h_opt_scale', 'var')
+            error('equalizer_coeffs.mat 中缺少 h_opt_scale，请先运行 calc_equalizer_coeffs.m 生成量化系数。');
+        end
+
+        h_fix = h_opt_scale;
+        % 获取定点对象的总字长和小数位数
+        word_width = h_fix.WordLength;
+        float_width = h_fix.FractionLength;
+        % 提取定点对象的数学运算规则（fimath 对象）。这个对象定义了在这组数进行加减乘除的时候，遇到溢出怎么处理、遇到小数位数不够怎么舍入等 RTL 乘加器的底层算术规则。
+        fm = fimath(h_fix);
+
+        % 将浮点信道输出量化为与系数一致的定点格式
+        data3_fix = fi(data3, 1, word_width, float_width, 'RoundingMethod', 'Floor', ...
+            'OverflowAction', 'Saturate', 'fimath', fm);
+        % 'RoundingMethod', 'Floor'：向负无穷方向截断小数（通常对应 Verilog 把低位直接丢掉的操作）。
+        % 'OverflowAction', 'Saturate'：溢出时饱和钳位。如果计算结果超出了最大位表示范围，就钳制在极值上而不是翻转溢出（这对应 RTL 中的饱和截断逻辑）。
+        % 生成 FIR 滤波器分母系数（FIR的分母系数始终为常数 1）。
+        a_fix = fi(1, 1, 2, 0, 'fimath', fm);
+
+        % 定点 FIR 滤波，再转回 double 进入后续 BER 统计
+        data4_fix = filter(h_fix, a_fix, data3_fix);
+        data4 = double(data4_fix);
        
         % ---------------- Step 6. BPSK 解调 ----------------
         % 解调方法: -1 -> 0, 1 -> 1, 即 x[n] = y[n] >= 0
@@ -182,7 +202,7 @@ if ~exist(metrics_dir, 'dir')
     mkdir(metrics_dir);
 end
 
-metrics_name = sprintf('%s_%d_frac.json', solve_mode_str, N_tap);
+metrics_name = sprintf('%s_%d_fix.json', solve_mode_str, N_tap);
 metrics_path = fullfile(metrics_dir, metrics_name);
 
 fid = fopen(metrics_path, 'w', 'n', 'UTF-8');
@@ -285,8 +305,8 @@ if ~exist(fig_dir, 'dir')
     mkdir(fig_dir);
 end
 
-ber_svg_path = fullfile(fig_dir, 'ber_frac.svg');
-dist_svg_path = fullfile(fig_dir, 'dist_frac.svg');
+ber_svg_path = fullfile(fig_dir, 'ber_fix.svg');
+dist_svg_path = fullfile(fig_dir, 'dist_fix.svg');
 
 try
     exportgraphics(fig_ber, ber_svg_path, 'ContentType', 'vector');

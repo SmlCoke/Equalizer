@@ -78,10 +78,10 @@
 | data_o   | 1+DO_IL+DO_FL             | 输出数据                 |
 
 ### 3.2 硬件架构设计要求
-实验要求实现至少两种不同的硬件结构，并进行性能对比：
-1.  **Folding Architecture (A1)**：**必选**。通过 **Folding** 技术优化面积，设计目标是使电路 **Area** 最小化。
-2.  **Unfolding Architecture (A2)**：**可选**。通过 **Unfolding** 技术优化处理速度，设计目标是使 **Speed** 最快。
-3.  **Systolic Array (A3)**：**可选**（与 A2 二选一）。应用 **Systolic Array** 优化吞吐率，使 **Throughput** 达到最高。
+实验要求实现全部三种硬件结构，并进行性能对比：
+1.  **Folding Architecture (A1)**：通过 **Folding** 技术优化面积，设计目标是使电路 **Area** 最小化。
+2.  **Unfolding Architecture (A2)**：通过 **Unfolding** 技术优化处理速度，设计目标是使 **Speed** 最快。
+3.  **Systolic Array (A3)**：**可应用 **Systolic Array** 优化吞吐率，使 **Throughput** 达到最高。
     *   **注**：建议利用 **AI-assisted design**（如 LLM）辅助生成 **Unfolding** 或 **Systolic Array** 的代码，并记录 **Prompt** 设置与调试过程。
 
 ### 3.3 功能仿真与验证 (ModelSim)
@@ -142,7 +142,7 @@
 ## VI. AI-assisted Circuit Design
 
 ### 6.1 AI 辅助设计要求
-*   **设计范围**：建议在 **Unfolding** (A2) 或 **Systolic Array** (A3) 的电路设计中探索使用 AI 辅助技术。
+*   **设计范围**：建议在 **Unfolding** (A2) 和 **Systolic Array** (A3) 的电路设计中探索使用 AI 辅助技术。
 *   **记录内容**：实验报告需详细记录以下内容：
     *   使用的平台或 **LLM**（大语言模型）。
     *   设计的 **Prompt**（提示词）及其迭代过程。
@@ -197,7 +197,10 @@
     │   ├── folding
     │   │   ├── src
     │   │   └── tb
-    │   └── unfolding/systolic
+    │   ├── unfolding
+    │   │   ├── src
+    │   │   └── tb
+    │   └── systolic
     │       ├── src
     │       └── tb
     └── report.pdf
