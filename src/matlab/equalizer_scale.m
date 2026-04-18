@@ -65,7 +65,7 @@ for cnt = 1:length(ebn0)
             case 1
                 % multi path coefficient
                 mpc = [1, 0.9, 0.8]; 
-                % 信道作用用卷积运算模拟
+                % 信道作用用滤波运算模拟
 				data2 = filter(mpc, 1, data1); 
         end
 
