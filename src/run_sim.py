@@ -210,8 +210,12 @@ def main():
         raise FileNotFoundError(f"Input file not found: {input_file}")
 
     # Step 3. 正则表达式自动获取 RTL 模块的 data_in, data_out 位宽，兼容多种声明格式
-    input_width = parse_port_width(rtl_file, "data_in", "input")
-    output_width = parse_port_width(rtl_file, "data_out", "output")
+    if ("unfolding" in rtl_file.parent.name):
+        input_width = parse_port_width(rtl_file, "data_in_even", "input")
+        output_width = parse_port_width(rtl_file, "data_out_even", "output")
+    else:
+        input_width = parse_port_width(rtl_file, "data_in", "input")
+        output_width = parse_port_width(rtl_file, "data_out", "output")
 
     # Step 4. 扫描输入文件，获取 example_count 和 symbol_count
     # 当然，我们也可以直接从 config_meta.json 中读取
