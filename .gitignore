@@ -11,3 +11,4 @@ docs/ai/
 # 仿真数据与编译产物
 examples/
 build/
+__pycache__/
