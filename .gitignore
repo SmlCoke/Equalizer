@@ -4,6 +4,9 @@ result/
 
 # Data files
 *.mat
+*.zip
+*.rar
+*.tar.gz
 
 # AI session
 docs/ai/
