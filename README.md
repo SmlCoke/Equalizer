@@ -119,7 +119,7 @@ Equalizer/
 此外，在功能验证阶段，**更推荐使用的是 `Python + iverilog + vvp` 的开源工具链，具有更快的迭代速度和更友好的调试体验**。
 
 需要用到的工具包括：
-- `Icarus Verilog`：Verilog 编译器，用于编译 Verilog 模块和 testbench下
+- `Icarus Verilog`：Verilog 编译器，用于编译 Verilog 模块和 testbench
 - `vvp`：Icarus Verilog 的仿真器，用于运行编译后的仿真文件
 - `gtkwave`：波形查看工具，用于查看仿真结果的波形图
 

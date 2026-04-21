@@ -16,25 +16,24 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from common import print_summary_box
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Equalizer simulation runner")
     # 输入 RTL 模块，默认 baseline 方案
     parser.add_argument("--rtl-file", default="rtl/baseline/equalizer.v", help="RTL top file, relative to src/")
-    # 输入数据目录，默认 examples/len_100_counts_1000 方案
+    # 输入 testbench 文件，留空时按 RTL 类型自动选择
+    parser.add_argument("--tb-file", default="", help="Testbench file, relative to src/")
+    # testbench 顶层模块名
     parser.add_argument("--data-dir", default="../examples/len_100_counts_1000", help="Input data directory")
     # 输出数据小数部分位宽，默认为10，整个实验中一般不会改动
     parser.add_argument("--frac-bits", type=int, default=10, help="Fraction bits for float conversion")
     # 每个样本的最大等待周期数，默认为4096，过小可能导致仿真不完整，过大可能导致仿真时间过长。
     parser.add_argument("--timeout-cycles", type=int, default=4096, help="Max wait cycles per example")
-    # 输出文件前缀，默认为空，表示使用 RTL 文件所在目录名作为前缀。比如 rtl/baseline/equalizer.v 的前缀就是 baseline。保存的文件会命名为 baseline_rtl_output_fix.txt等。
-    parser.add_argument("--out-prefix", default="", help="Output file prefix")
     # 是否打印波形
     parser.add_argument("--wave", action="store_true", help="Dump VCD waveform")
     # 是否在仿真结束后自动打开波形文件
     parser.add_argument("--view-wave", action="store_true", help="Open waveform with gtkwave")
-    # 在控制台预览输出的浮点值，默认为8，表示预览每行的前8个值。设置为0表示不预览。
-    parser.add_argument("--preview", type=int, default=8, help="Preview float values on console")
     return parser.parse_args()
 
 def strip_comments(text):
@@ -131,12 +130,30 @@ def preview_line(float_file, limit):
 def run_cmd(cmd):
     subprocess.run(cmd, check=True)
 
+
+def resolve_user_path(base_dir, path_str):
+    path = Path(path_str)
+    if not path.is_absolute():
+        path = base_dir / path
+    return path.resolve()
+
+# 根据 RTL 文件路径自动推断 Testbench 文件路径
+def get_tb_file(base_dir, rtl_file):
+    rtl_name = rtl_file.stem
+    candidate_tb = base_dir / "rtl" / "tb" / f"{rtl_name}_tb.v"
+    if candidate_tb.exists():
+        return candidate_tb
+    else:
+        raise FileNotFoundError(f"Testbench file not found for {rtl_file}. Expected at {candidate_tb}")
+    
 def verify(float_file, gold_file, mismatch_file):
     '''
     逐行、逐个对比 float 结果
     如果不匹配，把所有不匹配的信息保存到 csv
     '''
     mismatch = []
+    example_counts = 0
+    symbol_counts = 0
     with float_file.open("r", encoding="utf-8") as f1, gold_file.open("r", encoding="utf-8") as f2:
         for line_num, (line1, line2) in enumerate(zip(f1, f2), start=1):
             tokens1 = line1.strip().split()
@@ -148,15 +165,25 @@ def verify(float_file, gold_file, mismatch_file):
                 f2_val = float(t2)
                 if abs(f1_val - f2_val) > 1e-6:
                     mismatch.append((line_num, idx + 1, f1_val, f2_val))
-    print("-----------------------------------------------------------------------------")
+            # 统计符号数量和样本数量
+            symbol_counts += len(tokens1)
+            example_counts += 1
     if not mismatch:
-        print("^_^ Verification passed! RTL output totally matches gold output.")
+        print_summary_box("Verification Report", [
+            ("Status", "^_^ Passed!"),
+            ("Example Count", str(example_counts)),
+            ("Symbol Count", str(symbol_counts))
+        ])
     else:
         with mismatch_file.open("w", encoding="utf-8") as fout:
             fout.write("line_num,token_idx,rtl_value,gold_value\n")
             for line_num, token_idx, rtl_val, gold_val in mismatch:
                 fout.write(f"{line_num},{token_idx},{rtl_val:.16g},{gold_val:.16g}\n")
-        print("T_T Verification failed! ")
+        print_summary_box(f"Verification Report" , [
+            ("Status", "T_T Failed!"),
+            ("Total Mismatch", str(len(mismatch))),
+            ("Mismatch File", mismatch_file.name)
+        ])
 
 
 def main():
@@ -165,9 +192,14 @@ def main():
 
     # step 2. 获取各个文件的文件目录
     base_dir = Path(__file__).resolve().parent
-    rtl_file = (base_dir / args.rtl_file).resolve()
-    data_dir = (base_dir / args.data_dir).resolve()
-    tb_file = base_dir / "rtl" / "tb" / "equalizer_tb.v"
+    # 解析 RTL 模块路径
+    rtl_file = resolve_user_path(base_dir, args.rtl_file)
+    # 解析输入数据文件夹路径
+    data_dir = resolve_user_path(base_dir, args.data_dir)
+    # 解析 Testbench 文件路径
+    tb_file = get_tb_file(base_dir, rtl_file)
+    # 强制指定 testbench 顶层模块名为 equalizer_tb，保持和 testbench 文件中的一致，简化用户输入
+    tb_top = "equalizer_tb"  
     input_file = data_dir / "input_fix.txt"
 
     if not rtl_file.exists():
@@ -186,7 +218,7 @@ def main():
     example_count, symbol_count = scan_input_file(input_file)
 
     # Step 5. 创建编译产物和输出文件路径
-    rtl_tag = args.out_prefix or rtl_file.parent.name
+    rtl_tag = rtl_file.parent.name
     build_dir = base_dir / "rtl" / "build"
     build_dir.mkdir(parents=True, exist_ok=True)
 
@@ -202,7 +234,7 @@ def main():
         "iverilog",
         "-g2001",
         "-s",
-        "equalizer_tb",
+        tb_top,
         f"-DINPUT_WIDTH={input_width}",
         f"-DOUT_WIDTH={output_width}",
         f"-DSYMBOL_COUNT={symbol_count}",
@@ -215,10 +247,12 @@ def main():
         "-o",
         str(vvp_file),
     ]
+    # 根据输入参数决定是否打印波形
     if args.wave or args.view_wave:
         compile_cmd.append("-DDUMP_VCD")
     compile_cmd.extend(str(path) for path in sources)
 
+    print("Design compiling...")
     run_cmd(compile_cmd)
 
     # Step 7. 调用 vvp 工具运行仿真
@@ -230,41 +264,44 @@ def main():
         f"+OUT_FILE={bin_file.as_posix()}",
         f"+TIMEOUT_CYCLES={args.timeout_cycles}",
     ]
+    # 根据输入参数决定是否打印波形，如果打印波形则传入波形文件路径参数，供 testbench 中的 $dumpfile 使用
     if args.wave or args.view_wave:
         vvp_cmd.append(f"+VCD_FILE={vcd_file.as_posix()}")
 
+    print("Running simulation...")
     run_cmd(vvp_cmd)
 
     # Step 8. testbench 将二进制补码形式的结果保存到文件，由 python 转换为浮点数形式
     write_float_file(bin_file, float_file, args.frac_bits)
 
     # Step 9. 打印本次仿真报告
-    print("------------------------- Simulation Report -----------------------------------")
-    print(f"rtl        : {rtl_file}")
-    print(f"input bits : {input_width}")
-    print(f"output bits: {output_width}")
-    print(f"examples   : {example_count}")
-    print(f"symbols    : {symbol_count}")
-    print(f"bin file   : {bin_file}")
-    print(f"float file : {float_file}")
-    if args.wave or args.view_wave:
-        print(f"wave file  : {vcd_file}")
-    if args.preview > 0:
-        preview = preview_line(float_file, args.preview)
-        if preview:
-            print(f"preview    : {preview}")
+    print_summary_box("Simulation Report",[
+        ("RTL", rtl_file.name),
+        ("Testbench", tb_file.name),
+        ("Input Width", str(input_width)),
+        ("Output Width", str(output_width)),
+        ("Example Count", str(example_count)),
+        ("Symbol Count", str(symbol_count)),
+        ("Bin Result", bin_file.name),
+        ("Float Result", float_file.name),
+        ("Preiview", preview_line(float_file, 4))
+    ])
 
-    # Step 10. 根据 view_wave 参数决定是否调用 gtkwave 工具打开波形文件
-    if args.view_wave:
-        subprocess.Popen(["gtkwave", str(vcd_file)])
-
-    # Step 11. 验证输出结果是否正确
+    # Step 10. 验证输出结果是否正确
     gold_file = data_dir / "output_float.txt"
     mismatch_file = data_dir / "mismatch.csv"
     if not gold_file.exists():
         print(f"Gold file not found: {gold_file}")
         sys.exit(1)
+
+    print("Verifying RTL output against gold output...")
     verify(float_file, gold_file, mismatch_file)
+
+    # Step 10. 根据 view_wave 参数决定是否调用 gtkwave 工具打开波形文件
+    if args.view_wave:
+        subprocess.Popen(["gtkwave", str(vcd_file)])
+
+
 
 
 if __name__ == "__main__":
