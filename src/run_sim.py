@@ -22,8 +22,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Equalizer simulation runner")
     # 输入 RTL 模块，默认 baseline 方案
     parser.add_argument("--rtl-file", default="rtl/baseline/equalizer.v", help="RTL top file, relative to src/")
-    # 输入 testbench 文件，留空时按 RTL 类型自动选择
-    parser.add_argument("--tb-file", default="", help="Testbench file, relative to src/")
     # testbench 顶层模块名
     parser.add_argument("--data-dir", default="../examples/len_100_counts_1000", help="Input data directory")
     # 输出数据小数部分位宽，默认为10，整个实验中一般不会改动

@@ -55,6 +55,9 @@ Equalizer/
 │   ├── rtl/                           # Verilog HDL 代码实现
 │   │   ├── baseline/                  # 原型实现，串行加法器
 │   │   ├── tree/                      # 优化实现，平衡加法树
+│   │   ├── folding/                   # 折叠架构实现
+│   │   ├── unfolding/                 # 展开架构实现
+│   │   ├── systolic_array/            # 脉动阵列架构实现
 │   │   └── tb/                        # Testbench 测试平台
 │   ├── run_sim.py                     # 编译-仿真-波形-验证全链路顶层调度脚本
 │ 
