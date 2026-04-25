@@ -43,6 +43,7 @@ Equalizer/
 │   │   ├── ai_studio/                 # AI Studio 对话日志
 │   │   └── notebooklm/                # NotebookLM 对话日志
 │   ├── assets/                        # 图片等静态资源
+│   ├── notes/                         # 课程笔记：展开、折叠、脉动阵列
 │   └── task.md                        # 原始实验任务要求书
 │ 
 ├── src/                               # ★ RTL 源码及 Testbench 测试平台 (本项目核心编写)
