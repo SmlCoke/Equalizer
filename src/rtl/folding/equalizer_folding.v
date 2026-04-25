@@ -47,8 +47,8 @@ module equalizer_folding #(
     input  wire               rst_n,
     input  wire               valid_in,       // 输入有效信号
     input  wire signed [7:0]  data_in,        // 输入信号，8 位有符号整数
-    output wire               valid_out,      // 元数据，输出有效信号
-    output wire signed [22:0] data_out        // 输出信号，23 位有符号整数
+    output reg                valid_out,      // 元数据，输出有效信号
+    output reg  signed [22:0] data_out        // 输出信号，23 位有符号整数
 );
 
 
@@ -176,9 +176,15 @@ module equalizer_folding #(
 
     // ------------------- 5. 输出逻辑 -------------------
     // 输出在选通 {1} 的时候有效，从加法器的输出口输出
-    // 只有在第 1 个周期时输出有效信号
-    assign valid_out = (fold_cnt == 3'b111) && active ? 1'b1 : 1'b0;
-    // 输出加法器的结果
-    assign data_out = add_out;
+    // 只有在第 1 个周期时输出有效信号，并寄存器打拍输出
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            valid_out <= 1'b0;
+            data_out  <= 23'sd0;
+        end else begin
+            valid_out <= (fold_cnt == 3'b111) && active ? 1'b1 : 1'b0;
+            data_out  <= add_out;
+        end
+    end
     
 endmodule

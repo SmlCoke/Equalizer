@@ -33,8 +33,8 @@ module equalizer #(
     input  wire               rst_n,
     input  wire               valid_in,       // 输入有效信号
     input  wire signed [7:0]  data_in,        // 输入信号，8 位有符号整数
-    output wire               valid_out,      // 元数据，输出有效信号
-    output wire signed [22:0] data_out        // 输出信号，23 位有符号整数
+    output reg                valid_out,      // 元数据，输出有效信号
+    output reg  signed [22:0] data_out        // 输出信号，23 位有符号整数
 );
 
     // 11 阶均衡器的移位寄存器，存储最近的 11 个输入数据
@@ -82,9 +82,6 @@ module equalizer #(
         end
     end
 
-    // 当前实现的 data_out 是组合结果，因此 valid_out 直接跟随输入有效。
-    assign valid_out = valid_in;
-
     // 组合逻辑：乘法器
     assign multi_out[0] = shift_data[0] * multi_coeffs_0;
     assign multi_out[1] = shift_data[1] * multi_coeffs_1;
@@ -104,8 +101,20 @@ module equalizer #(
     assign add_out_5 = add_out_4 + multi_out[6];
     assign add_out_6 = add_out_5 + multi_out[7];
 
-    // 输出结果
-    // 注意：这种输出方式极度危险，wire 直接输出而不经过任何寄存器打拍
-    // 本质是因为有限横向滤波器的固有限制
-    assign data_out = add_out_6;
+    // valid 要打拍一次才能和数据输出对齐，
+    // 因为数据输出需要采样 shift_data 的旧值，而 valid 是采样当前输入的 valid_in
+    reg valid_pipe;
+    
+    // 数据输出寄存器打拍
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            valid_pipe <= 1'b0;
+            valid_out <= 1'b0;
+            data_out  <= 23'sb0;
+        end else begin
+            valid_pipe <= valid_in;
+            valid_out <= valid_pipe;
+            data_out  <= add_out_6;
+        end
+    end
 endmodule

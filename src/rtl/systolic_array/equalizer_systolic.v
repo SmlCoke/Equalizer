@@ -35,8 +35,8 @@ module equalizer_systolic #(
     input  wire               rst_n,
     input  wire               valid_in,       // 输入有效信号
     input  wire signed [7:0]  data_in,        // 输入信号，8 位有符号整数
-    output wire               valid_out,      // 元数据，输出有效信号
-    output wire signed [22:0] data_out        // 输出信号，23 位有符号整数
+    output reg                valid_out,      // 元数据，输出有效信号
+    output reg  signed [22:0] data_out        // 输出信号，23 位有符号整数
 );
 
     integer i;
@@ -91,21 +91,15 @@ module equalizer_systolic #(
     // 输出逻辑：输出必须被打一拍寄存，以隔离组合电路的半周期竞争与 Testbench 的错位采样
     // Testbench 中，往往在时钟下降沿给数据，此时组合逻辑会直接计算出 valid_out = 1 ，导致错误
     // 事实上，输出往往应该打拍寄存
-    reg valid_out_reg;
-    reg signed [22:0] data_out_reg;
-
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            valid_out_reg <= 1'b0;
-            data_out_reg  <= 23'sd0;
+            valid_out <= 1'b0;
+            data_out  <= 23'sd0;
         end else begin
-            valid_out_reg <= valid_in;
+            valid_out <= valid_in;
             if (valid_in) begin
-                data_out_reg <= add_out[0];
+                data_out <= add_out[0];
             end
         end
     end
-
-    assign valid_out = valid_out_reg; 
-    assign data_out  = data_out_reg;
 endmodule

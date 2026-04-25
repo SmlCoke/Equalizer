@@ -59,7 +59,19 @@ Equalizer/
 │   │   ├── unfolding/                 # 展开架构实现
 │   │   ├── systolic_array/            # 脉动阵列架构实现
 │   │   └── tb/                        # Testbench 测试平台
+│   ├── common.py                      # SmlCoke 常用工具函数
 │   ├── run_sim.py                     # 编译-仿真-波形-验证全链路顶层调度脚本
+│   └── README.md                      # RTL 设计与仿真说明文档
+│
+├── syn/                               # Vivado 综合与性能评估相关文件
+│   ├── baseline/                      # Baseline 版本综合文件
+│   │   ├── work/                      # Vivado 综合工作目录
+│   │   ├── scripts/                   # 综合脚本与约束文件
+│   │   └── reports/                   # 综合报告输出目录
+│   ├── folding/                       # Folding 版本综合文件
+│   ├── systolic_array/                # Systolic Array 版本综合文件
+│   ├── tree/                          # Tree 版本综合文件
+│   └── unfolding/                     # Unfolding 版本综合文件
 │ 
 └── README.md                          # 项目详细说明与指导
 ```
@@ -99,6 +111,10 @@ Equalizer/
 
 此外，初始实现的是基线版本 [baseline 版本](src/rtl/baseline/equalizer.v)，用作功能校验以及后续优化版本的性能对比基准。
 基线版本采用《数字信号处理》教材经典的 FIR 滤波器电路实现，关键路径极长，主要体现在**串行加法器**。[tree 版本](src/rtl/tree/equalizer.v) 则通过**平衡加法树**的方式优化了加法器的结构，显著缩短了关键路径。也可作为后续展开架构的基础版本。
+
+### 3.4 `syn/` — Vivado 逻辑综合与性能评估
+
+针对五种 RTL 实现分别进行 Vivado 逻辑综合，评估其在 Kintex-UltraScale KCU105 FPGA 上的资源占用和时钟频率表现。综合脚本和约束文件位于对应版本的 `scripts/` 目录下，综合报告输出在 `reports/` 目录下。
 
 ---
 
@@ -151,7 +167,23 @@ sudo apt install iverilog gtkwave -y
 brew install icarus-verilog gtkwave
 ```
 
-#### (3) 运行仿真
+### 4.2 MATLAB 仿真与数据生成
+
+- `/src/matlab/calc_equalizer_coeffs.m`：计算均衡器系数，需要指定滤波器抽头数以及零迫 (ZF) 和最小二乘 (LS) 两种算法。
+- `/src/matlab/equalizer.m`：基带通信链路仿真，验证均衡器性能。
+- `/src/matlab/equalizer_scale.m`：定点化基带通信链路仿真，验证定点化后性能。
+- `/src/matlab/test_data_get.m`：生成定点化测试数据，供 Verilog Testbench 使用。
+
+注：MATLAB 的脚本化使用方法
+```bash
+cd src/
+matlab -batch "addpath('./matlab'); calc_equalizer_coeffs"
+matlab -batch "addpath('./matlab'); equalizer"
+matlab -batch "addpath('./matlab'); equalizer_scale"
+matlab -batch "addpath('./matlab'); test_data_get(100, 1000)"
+```
+
+### 4.3 RTL 仿真与验证
 
 注意确保激活的 python 环境中有 `iverilog`, `vvp` 和 `gtkwave` 可用。
 
@@ -168,6 +200,20 @@ python run_sim.py
 
 更多测试数据形状以及仿真模式（**命令行参数**）参见 [src/matlab/test_data_get.m](src/matlab/test_data_get.m) 和 [src/run_sim.py](src/run_sim.py)。
 
+
+### 4.4 Vivado 逻辑综合与性能评估
+
+确保当前环境有 Vivado 2018.1 的许可，并且已经正确设置了环境变量。
+
+我们以综合 `baseline` 版本为例，约束文件和综合脚本放置在：`/syn/baseling/scripts/`：
+
+```bash
+cd /syn/baseline/work/
+vivado -mode batch -source ../scripts/run_synth.tcl
+```
+
+综合完成后，报告文件位于 `/syn/baseline/reports/`, 日志位于 `/syn/baseline/work/`。
+
 ---
 
 ## V. 设计进度
@@ -180,5 +226,5 @@ python run_sim.py
 | RTL 实现/验证 | 进阶版本：折叠架构 | ✅️ 已完成 |
 | RTL 实现/验证 | 进阶版本：展开架构 | ✅️ 已完成 |
 | RTL 实现/验证 | 进阶版本：脉动阵列架构 | ✅️ 已完成 |
-| 逻辑综合 | Vivado 逻辑综合与资源评估 | 🔲 待完成 |
+| 逻辑综合 | Vivado 逻辑综合与资源评估 | ✅️ 已完成 |
 | Review | 根据综合和资源评估结果再次优化 | 🔲 待完成 |

@@ -3,7 +3,7 @@
  * 模块名称: equalizer
  * 作者: Equalizer 团队
  * 日期: 2026-04-18
- * 版本: v1.0
+ * 版本: v1.1
  *
  * 功能概述:
  *   11 阶均衡滤波器横向原始实现，使用最小二乘法设计，适用于高速通信系统中的信道均衡。
@@ -16,6 +16,7 @@
  *
  * 版本定位:
  *   - v1.0 
+ *   - v1.1 使用寄存器打拍输出
  *     
  */
 
@@ -33,8 +34,8 @@ module equalizer #(
     input  wire               rst_n,
     input  wire               valid_in,       // 输入有效信号
     input  wire signed [7:0]  data_in,        // 输入信号，8 位有符号整数
-    output wire               valid_out,      // 元数据，输出有效信号
-    output wire signed [18:0] data_out        // 输出信号，19 位有符号整数
+    output reg                valid_out,      // 元数据，输出有效信号
+    output reg  signed [18:0] data_out        // 输出信号，19 位有符号整数
 );
 
     // 11 阶均衡器的移位寄存器，存储最近的 11 个输入数据
@@ -48,7 +49,8 @@ module equalizer #(
     // 加法树第二级结果
     wire signed [17:0] partial_sum_2 [0:1];
     // 加法树第三级结果就是最终输出
-
+    wire signed [18:0] data_out_int;
+    
     // 输入数据寄存器移位逻辑
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -80,9 +82,6 @@ module equalizer #(
         end
     end
 
-    // 当前实现的 data_out 是组合结果，因此 valid_out 直接跟随输入有效。
-    assign valid_out = valid_in;
-
     // 组合逻辑：乘法器
     assign multi_out[0] = shift_data[0] * multi_coeffs_0;
     assign multi_out[1] = shift_data[1] * multi_coeffs_1;
@@ -105,5 +104,24 @@ module equalizer #(
     assign partial_sum_2[1] = partial_sum_1[2] + partial_sum_1[3]; // 18 位
 
     // 第三级加法树: INT18 + INT18 = INT19
-    assign data_out = partial_sum_2[0] + partial_sum_2[1]; // 19 位
+    assign data_out_int = partial_sum_2[0] + partial_sum_2[1]; // 19 位
+
+    // valid 要打拍一次才能和数据输出对齐，
+    // 因为数据输出需要采样 shift_data 的旧值，而 valid 是采样当前输入的 valid_in
+    reg valid_pipe;
+    
+    // 寄存器打拍输出
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            // 复位时清空输出寄存器
+            data_out <= 19'sb0;
+            valid_out <= 1'b0;
+            valid_pipe <= 1'b0;
+        end else begin
+            // 输出有效时更新输出寄存器
+            valid_pipe <= valid_in; // 将输入的 valid_in 打拍到 valid_pipe
+            valid_out <= valid_pipe; // 输出有效信号只持续一个周期
+            data_out <= data_out_int; // 这里 data_out 已经是组合逻辑的结果，直接赋值即可
+        end
+    end
 endmodule

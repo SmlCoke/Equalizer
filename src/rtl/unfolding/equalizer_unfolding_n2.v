@@ -28,9 +28,9 @@ module equalizer_unfolding_n2 #(
     input  wire               valid_in,
     input  wire signed [7:0]  data_in_even,  // 偶序列输入 x[2k]
     input  wire signed [7:0]  data_in_odd,   // 奇序列输入 x[2k+1]
-    output wire               valid_out,
-    output wire signed [18:0] data_out_even, // 偶序列输出 y[2k]
-    output wire signed [18:0] data_out_odd   // 奇序列输出 y[2k+1]
+    output reg                valid_out,
+    output reg  signed [18:0] data_out_even, // 偶序列输出 y[2k]
+    output reg  signed [18:0] data_out_odd   // 奇序列输出 y[2k+1]
 );
 
     // 抽取后的历史样本缓存:
@@ -74,8 +74,6 @@ module equalizer_unfolding_n2 #(
         end
     end
 
-    assign valid_out = valid_in;
-
     // 偶路输出方程:
     // y[2k] = h0*xe[k] + h1*xo[k-1] + h2*xo[k-2] + h3*xe[k-2]
     //       + h4*xe[k-3] + h5*xo[k-4] + h6*xo[k-5] + h7*xe[k-5]
@@ -107,7 +105,6 @@ module equalizer_unfolding_n2 #(
     assign ps1_even[3] = m_even[6] + m_even[7];
     assign ps2_even[0] = ps1_even[0] + ps1_even[1];
     assign ps2_even[1] = ps1_even[2] + ps1_even[3];
-    assign data_out_even = ps2_even[0] + ps2_even[1];
 
     // 奇路加法树
     assign ps1_odd[0] = m_odd[0] + m_odd[1];
@@ -116,6 +113,23 @@ module equalizer_unfolding_n2 #(
     assign ps1_odd[3] = m_odd[6] + m_odd[7];
     assign ps2_odd[0] = ps1_odd[0] + ps1_odd[1];
     assign ps2_odd[1] = ps1_odd[2] + ps1_odd[3];
-    assign data_out_odd = ps2_odd[0] + ps2_odd[1];
+
+    // valid 要打拍一次才能和数据输出对齐，
+    // 因为数据输出需要采样 shift_data 的旧值，而 valid 是采样当前输入的 valid_in
+    reg valid_pipe;
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            valid_pipe    <= 1'b0;
+            valid_out     <= 1'b0;
+            data_out_even <= 19'sb0;
+            data_out_odd  <= 19'sb0;
+        end else begin
+            valid_pipe    <= valid_in;
+            valid_out     <= valid_pipe;
+            data_out_even <= ps2_even[0] + ps2_even[1];
+            data_out_odd  <= ps2_odd[0] + ps2_odd[1];
+        end
+    end
 
 endmodule
