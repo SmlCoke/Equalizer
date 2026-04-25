@@ -48,15 +48,29 @@ module equalizer_systolic #(
         // 10 级移位寄存器，打断串行加法器的关键路径
     reg signed [22:0] shift_data [0:9];
     
+    // 输入数据打拍寄存
+    reg valid_in_reg;
+    reg signed [7:0] data_in_reg;
+
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            valid_in_reg <= 1'b0;
+            data_in_reg  <= 8'sb0;
+        end else begin
+            valid_in_reg <= valid_in;
+            data_in_reg  <= data_in;
+        end
+    end
+
     // 乘法器逻辑：输入广播到所有乘法器
-    assign multi_out[0] = data_in * multi_coeffs_0; // x[n] * h[0]
-    assign multi_out[1] = data_in * multi_coeffs_1; // x[n] * h[1]
-    assign multi_out[2] = data_in * multi_coeffs_2; // x[n] * h[2]
-    assign multi_out[3] = data_in * multi_coeffs_3; // x[n] * h[3]
-    assign multi_out[4] = data_in * multi_coeffs_4; // x[n] * h[4]
-    assign multi_out[5] = data_in * multi_coeffs_5; // x[n] * h[5]
-    assign multi_out[6] = data_in * multi_coeffs_6; // x[n] * h[6]
-    assign multi_out[7] = data_in * multi_coeffs_7; // x[n] * h[7]
+    assign multi_out[0] = data_in_reg * multi_coeffs_0; // x[n] * h[0]
+    assign multi_out[1] = data_in_reg * multi_coeffs_1; // x[n] * h[1]
+    assign multi_out[2] = data_in_reg * multi_coeffs_2; // x[n] * h[2]
+    assign multi_out[3] = data_in_reg * multi_coeffs_3; // x[n] * h[3]
+    assign multi_out[4] = data_in_reg * multi_coeffs_4; // x[n] * h[4]
+    assign multi_out[5] = data_in_reg * multi_coeffs_5; // x[n] * h[5]
+    assign multi_out[6] = data_in_reg * multi_coeffs_6; // x[n] * h[6]
+    assign multi_out[7] = data_in_reg * multi_coeffs_7; // x[n] * h[7]
 
     // 加法器逻辑：与移位寄存器中的数据进行累加
     assign add_out[0] = multi_out[0] + shift_data[9];
@@ -73,7 +87,7 @@ module equalizer_systolic #(
             for (i = 0; i < 10; i = i + 1) begin
                 shift_data[i] <= 23'sb0;
             end
-        end else if (valid_in) begin
+        end else if (valid_in_reg) begin
             // 仅当输入有效时进行数据移位，否则冻结移位寄存器，防止无效数据进入计算
             shift_data[0] <= multi_out[7];
             shift_data[1] <= add_out[6];
@@ -96,8 +110,8 @@ module equalizer_systolic #(
             valid_out <= 1'b0;
             data_out  <= 23'sd0;
         end else begin
-            valid_out <= valid_in;
-            if (valid_in) begin
+            valid_out <= valid_in_reg;
+            if (valid_in_reg) begin
                 data_out <= add_out[0];
             end
         end

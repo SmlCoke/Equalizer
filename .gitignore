@@ -19,3 +19,7 @@ __pycache__/
 # 综合产物与临时文件
 reports/
 work/
+
+# 学习文档
+report_reading_guide.md
+synthesis_report_materials.md
