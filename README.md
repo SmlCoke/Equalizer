@@ -174,6 +174,7 @@ brew install icarus-verilog gtkwave
 - `/src/matlab/equalizer.m`：基带通信链路仿真，验证均衡器性能。
 - `/src/matlab/equalizer_scale.m`：定点化基带通信链路仿真，验证定点化后性能。
 - `/src/matlab/test_data_get.m`：生成定点化测试数据，供 Verilog Testbench 使用。
+- `/src/matlab/batch_data_get.m`：批量生成定点化测试数据，供 MATLAB 仿真生成 BER 曲线使用。
 
 注：MATLAB 的脚本化使用方法
 ```bash
@@ -182,6 +183,7 @@ matlab -batch "addpath('./matlab'); calc_equalizer_coeffs"
 matlab -batch "addpath('./matlab'); equalizer"
 matlab -batch "addpath('./matlab'); equalizer_scale"
 matlab -batch "addpath('./matlab'); test_data_get(100, 1000)"
+matlab -batch "addpath('./matlab'); batch_data_get(100, 1000, 23, 1)"
 ```
 
 ### 4.3 RTL 仿真与验证
@@ -214,6 +216,14 @@ vivado -mode batch -source ../scripts/run_synth.tcl
 ```
 
 综合完成后，报告文件位于 `/syn/baseline/reports/`, 日志位于 `/syn/baseline/work/`。
+
+### 4.5 批量仿真与 BER 曲线生成
+
+```bash
+cd src
+# 硬件实现：RTL 滤波器仿真大量测试数据，统计误码率 (BER)，生成 BER 曲线
+python batch_sim.py
+```
 
 ---
 
