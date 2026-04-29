@@ -62,6 +62,8 @@ Equalizer/
 │   │   └── tb/                        # Testbench 测试平台
 │   ├── common.py                      # SmlCoke 常用工具函数
 │   ├── run_sim.py                     # 编译-仿真-波形-验证全链路顶层调度脚本
+│   ├── batch_sim.py                   # 批量仿真脚本，用于生成五种情况的 Error bits 数据
+│   ├── plot_sim.py                    # 用 batch_sim.py 生成的 Error bits 数据绘制 BER 曲线
 │   └── README.md                      # RTL 设计与仿真说明文档
 │
 ├── syn/                               # Vivado 综合与性能评估相关文件
@@ -223,6 +225,7 @@ vivado -mode batch -source ../scripts/run_synth.tcl
 cd src
 # 硬件实现：RTL 滤波器仿真大量测试数据，统计误码率 (BER)，生成 BER 曲线
 python batch_sim.py
+python plot_sim.py --dir ../examples/batch_len_1000_counts_10000/ --symbol_counts 1000 --example_counts 10000
 ```
 
 ---

@@ -32,7 +32,37 @@ def parse_args():
     
     return parser.parse_args()
 
-
+def verify_output(bin_file, golden_file, output_file):
+    '''
+    gold_file 格式：example_counts 行，每一行 symbol_count 个符号 {0, 1}，空格分隔
+    bin_file 格式：example_counts 行，每一行 symbol_count 个二进制补码，空格分隔
+    BPSK 调制后，0 映射为 -1， 1 映射为 +1
+    判决时，补码首位为 1 判决为 0，补码首位为 0 判决为 1
+    output_file 存储一个数，错误比特数
+    '''
+    with open(golden_file, "r") as gf, open(bin_file, "r") as bf:
+        golden_lines = gf.readlines()
+        bin_lines = bf.readlines()
+        if len(golden_lines) != len(bin_lines):
+            raise ValueError(f"Example count mismatch: {len(golden_lines)} in golden file vs {len(bin_lines)} in bin file")
+        
+        error_bits = 0
+        for g_line, b_line in zip(golden_lines, bin_lines):
+            g_symbols = g_line.strip().split()
+            b_values = b_line.strip().split()
+            if len(g_symbols) != len(b_values):
+                raise ValueError(f"Symbol count mismatch in line: {g_line} vs {b_line}")
+            for g_sym, b_val in zip(g_symbols, b_values):
+                g_bit = int(g_sym)
+                b_decision = 0 if b_val[0] == "1" else 1
+                if g_bit != b_decision:
+                    error_bits += 1
+        
+        # Save the error bits to the output file
+        with open(output_file, "w") as f:
+            f.write(str(error_bits))
+        
+        return error_bits
 
 def main():
     # step 1. 解析参数
@@ -74,21 +104,21 @@ def main():
     vvp_file = build_dir / f"{rtl_tag}.vvp"
 
     # Step 5. 调用 MATLAB 脚本生成测试数据
-    # if not matlab_script.exists():
-    #     raise FileNotFoundError(f"MATLAB script not found: {matlab_script}")
-    # matlab_script_name = matlab_script.stem
-    # for ebn0 in range(31):
-    #     matlab_cmd = [
-    #         "matlab",
-    #         "-batch",
-    #         f"addpath('./matlab'); {matlab_script_name}({symbol_count}, {example_count}, {ebn0}, 1)"
-    #     ]
-    #     print(f"Generating test data for Eb/N0 = {ebn0} dB...")
-    #     if (base_dir / ".." / "examples" / f"batch_len_{symbol_count}_counts_{example_count}" / f"ebn0_{ebn0}dB" / "data3_fix.txt").exists():
-    #         print(f"Test data for Eb/N0 = {ebn0} dB already exists, skipping MATLAB generation.")
-    #         continue
-    #     else:
-    #         run_cmd(matlab_cmd)
+    if not matlab_script.exists():
+        raise FileNotFoundError(f"MATLAB script not found: {matlab_script}")
+    matlab_script_name = matlab_script.stem
+    for ebn0 in range(31):
+        matlab_cmd = [
+            "matlab",
+            "-batch",
+            f"addpath('./matlab'); {matlab_script_name}({symbol_count}, {example_count}, {ebn0}, 1)"
+        ]
+        print(f"Generating test data for Eb/N0 = {ebn0} dB...")
+        if (base_dir / ".." / "examples" / f"batch_len_{symbol_count}_counts_{example_count}" / f"ebn0_{ebn0}dB" / "data3_fix.txt").exists():
+            print(f"Test data for Eb/N0 = {ebn0} dB already exists, skipping MATLAB generation.")
+            continue
+        else:
+            run_cmd(matlab_cmd)
 
     # Step 6. 调用 Icarus Verilog 工具编译 testbench 以及 RTL 模块
     # 关键参数通过编译宏导入，适配不同优化方案的 RTL 文件
@@ -116,10 +146,12 @@ def main():
     run_cmd(compile_cmd)
 
     # Step 8. 调用 vvp 工具运行仿真，遍历每一个 ebn0，生成对应的输出结果文件
+    # 然后进行验证，统计错误比特数，然后删除仿真生成的中间文件
     # 这一步传入的关键参数为仿真时参数，比如输入文件路径、输出结果路径等
     data_dir = base_dir / ".." / "examples" / f"batch_len_{symbol_count}_counts_{example_count}"
     for i in range(31):
         ebn0 = i  # Eb/N0 从 0 到 30 dB
+        golden_file = data_dir / f"ebn0_{ebn0}dB" / "data0.txt"
         input_file = data_dir / f"ebn0_{ebn0}dB" / "data3_fix.txt"
         bin_file = data_dir / f"ebn0_{ebn0}dB" / f"{rtl_tag}_rtl_output_fix.txt"
         if not input_file.exists():
@@ -133,7 +165,18 @@ def main():
         ]
         print(f"Running simulation for Eb/N0 = {ebn0} dB...")
         run_cmd(vvp_cmd)
+        print(f"Simulation completed for Eb/N0 = {ebn0} dB.")
+        output_file = data_dir / f"ebn0_{ebn0}dB" / f"{rtl_tag}_error_bits.txt"
+        
+        # 执行验证，统计错误比特数，并将结果保存到 output_file 中
+        print(f"Beginning verification for Eb/N0 = {ebn0} dB...")
+        error_bits = verify_output(bin_file, golden_file, output_file)
+        print(f"Verification completed for Eb/N0 = {ebn0} dB. Output saved to {output_file}. Error bits: {error_bits}")
 
+        # 删除仿真生成的中间文件
+        if bin_file.exists():
+            bin_file.unlink()
+            print(f"Deleted intermediate file: {bin_file}")
 
     print_summary_box("Batch Simulation Completed!", [
         f"RTL Module: {rtl_file.name}",
