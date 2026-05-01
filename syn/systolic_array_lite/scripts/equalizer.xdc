@@ -1,0 +1,1 @@
+create_clock -name clkin -period 3.3 -wavefor {0 1.65} [get_ports clk]

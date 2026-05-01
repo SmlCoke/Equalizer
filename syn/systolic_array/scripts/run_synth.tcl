@@ -3,7 +3,7 @@
 # =========================================================
 
 # 1. 设定全局变量
-set TOP_MODULE "equalizer_systolic"   ;# 替换为你的顶层模块名
+set TOP_MODULE "equalizer_systolic"   
 set PART "xcku040-ffva1156-2-e"         ;# KCU105 开发板对应的 FPGA 型号
 set REPORT_DIR "../reports/"              ;# 报告输出目录
 

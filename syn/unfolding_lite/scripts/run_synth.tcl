@@ -3,7 +3,7 @@
 # =========================================================
 
 # 1. 设定全局变量
-set TOP_MODULE "equalizer_folding"   
+set TOP_MODULE "equalizer_unfolding_n2"   
 set PART "xcku040-ffva1156-2-e"         ;# KCU105 开发板对应的 FPGA 型号
 set REPORT_DIR "../reports/"              ;# 报告输出目录
 
@@ -12,7 +12,7 @@ file mkdir $REPORT_DIR
 
 # 2. 读入源文件 (RTL)
 # 如果是 Verilog:
-read_verilog [glob ../../../src/rtl/folding/*.v]
+read_verilog [glob ../../../src/rtl/unfolding_lite/*.v]
 
 
 # 3. 读入约束文件 (XDC)

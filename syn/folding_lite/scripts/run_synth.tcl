@@ -12,7 +12,7 @@ file mkdir $REPORT_DIR
 
 # 2. 读入源文件 (RTL)
 # 如果是 Verilog:
-read_verilog [glob ../../../src/rtl/folding/*.v]
+read_verilog [glob ../../../src/rtl/folding_lite/*.v]
 
 
 # 3. 读入约束文件 (XDC)

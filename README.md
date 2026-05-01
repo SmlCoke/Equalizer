@@ -59,6 +59,9 @@ Equalizer/
 │   │   ├── folding/                   # 折叠架构实现
 │   │   ├── unfolding/                 # 展开架构实现
 │   │   ├── systolic_array/            # 脉动阵列架构实现
+│   │   ├── folding_lite/              # 折叠架构 Lite 版本
+│   │   ├── unfolding_lite/            # 展开架构 Lite 版本
+│   │   ├── systolic_array_lite/       # 脉动阵列架构 Lite 版本
 │   │   └── tb/                        # Testbench 测试平台
 │   ├── common.py                      # SmlCoke 常用工具函数
 │   ├── run_sim.py                     # 编译-仿真-波形-验证全链路顶层调度脚本
@@ -241,4 +244,4 @@ python plot_sim.py --dir ../examples/batch_len_1000_counts_10000/ --symbol_count
 | RTL 实现/验证 | 进阶版本：展开架构 | ✅️ 已完成 |
 | RTL 实现/验证 | 进阶版本：脉动阵列架构 | ✅️ 已完成 |
 | 逻辑综合 | Vivado 逻辑综合与资源评估 | ✅️ 已完成 |
-| Review | 根据综合和资源评估结果再次优化 | 🔲 待完成 |
+| Review | 根据综合和资源评估结果再次优化 | 🔲 进行中 |
