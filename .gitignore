@@ -1,6 +1,7 @@
 # Results and Outputs 
 results/
 result/
+*results*/
 
 # Data files
 *.mat

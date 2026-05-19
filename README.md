@@ -244,4 +244,4 @@ python plot_sim.py --dir ../examples/batch_len_1000_counts_10000/ --symbol_count
 | RTL 实现/验证 | 进阶版本：展开架构 | ✅️ 已完成 |
 | RTL 实现/验证 | 进阶版本：脉动阵列架构 | ✅️ 已完成 |
 | 逻辑综合 | Vivado 逻辑综合与资源评估 | ✅️ 已完成 |
-| Review | 根据综合和资源评估结果再次优化 | 🔲 进行中 |
+| Review | 根据综合和资源评估结果再次优化 | ✅️ 已完成 |

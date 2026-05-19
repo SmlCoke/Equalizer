@@ -8,7 +8,7 @@ import csv
 import matplotlib.pyplot as plt
 
 def main():
-    parser = argparse.ArgumentParser(description="Plot BER vs Eb/N0 from simulation results.")
+    parser = argparse.ArgumentParser(description="Plot BER vs Eb/N0 from simulation results (Lite versions).")
     parser.add_argument("--dir", type=str, required=True, help="Directory containing the simulation results (e.g., ebn0_0dB, ebn0_1dB...)")
     parser.add_argument("--symbol_counts", type=int, help="Number of symbols per example")
     parser.add_argument("--example_counts", type=int, help="Number of examples")
@@ -68,32 +68,26 @@ def main():
         "awgn": [],
         "multipath": [],
         "eq_matlab": [],
-        "baseline": [],
-        "tree": [],
-        "folding": [],
-        "unfolding": [],
-        "systolic": []
+        "folding_lite": [],
+        "unfolding_lite": [],
+        "systolic_lite": []
     }
     
     err_count_data = {
         "awgn": [],
         "multipath": [],
         "eq_matlab": [],
-        "baseline": [],
-        "tree": [],
-        "folding": [],
-        "unfolding": [],
-        "systolic": []
+        "folding_lite": [],
+        "unfolding_lite": [],
+        "systolic_lite": []
     }
     
     ebn0_list = []
     
     methods_hw = {
-        "baseline": "baseline_error_bits.txt",
-        "tree": "tree_error_bits.txt",
-        "folding": "folding_error_bits.txt",
-        "unfolding": "unfolding_error_bits.txt",
-        "systolic": "systolic_array_error_bits.txt"
+        "folding_lite": "folding_lite_error_bits.txt",
+        "unfolding_lite": "unfolding_lite_error_bits.txt",
+        "systolic_lite": "systolic_array_lite_error_bits.txt"
     }
 
     for ebn0 in ebn0_range:
@@ -153,10 +147,10 @@ def main():
 
     # Output CSV files
     os.makedirs(args.out_dir, exist_ok=True)
-    headers = ["Eb/N0(dB)", "AWGN", "Multipath", "Eq Filter (MATLAB)", "Eq Filter (Baseline)", "Eq Filter (Tree)", "Eq Filter (Folding)", "Eq Filter (Unfolding)", "Eq Filter (Systolic)"]
-    keys = ["awgn", "multipath", "eq_matlab", "baseline", "tree", "folding", "unfolding", "systolic"]
+    headers = ["Eb/N0(dB)", "AWGN", "Multipath", "Eq Filter (MATLAB)", "Eq Filter (Folding Lite)", "Eq Filter (Unfolding Lite)", "Eq Filter (Systolic Lite)"]
+    keys = ["awgn", "multipath", "eq_matlab", "folding_lite", "unfolding_lite", "systolic_lite"]
     
-    counts_csv = os.path.join(args.out_dir, "error_bits.csv")
+    counts_csv = os.path.join(args.out_dir, "error_bits_lite.csv")
     with open(counts_csv, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(headers)
@@ -164,7 +158,7 @@ def main():
             row = [e] + [err_count_data[k][i] for k in keys]
             writer.writerow(row)
             
-    rates_csv = os.path.join(args.out_dir, "error_bit_rates.csv")
+    rates_csv = os.path.join(args.out_dir, "error_bit_rates_lite.csv")
     with open(rates_csv, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(headers)
@@ -188,8 +182,6 @@ def main():
     c_eq     = [0.00, 0.60, 0.30]
     
     # Extend colors for HW implementations
-    c_base = [0.80, 0.20, 0.20]
-    c_tree = [0.80, 0.50, 0.10]
     c_fold = [0.50, 0.10, 0.80]
     c_unfold = [0.20, 0.80, 0.80]
     c_sys = [0.90, 0.10, 0.60]
@@ -200,18 +192,16 @@ def main():
     plt.plot(ebn0_list, ber_data["multipath"], '-o', color=c_multi, linewidth=2.0, markersize=mk_sz, markerfacecolor='w', label='Multipath (No Filter)')
     plt.plot(ebn0_list, ber_data["eq_matlab"], '-o', color=c_eq, linewidth=2.0, markersize=mk_sz, markerfacecolor='w', label='Eq Filter (MATLAB)')
     
-    plt.plot(ebn0_list, ber_data["baseline"], '-s', color=c_base, linewidth=1.5, markersize=mk_sz, markerfacecolor='w', label='Eq Filter (Baseline)')
-    plt.plot(ebn0_list, ber_data["tree"], '-^', color=c_tree, linewidth=1.5, markersize=mk_sz, markerfacecolor='w', label='Eq Filter (Tree)')
-    plt.plot(ebn0_list, ber_data["folding"], '-v', color=c_fold, linewidth=1.5, markersize=mk_sz, markerfacecolor='w', label='Eq Filter (Folding)')
-    plt.plot(ebn0_list, ber_data["unfolding"], '-d', color=c_unfold, linewidth=1.5, markersize=mk_sz, markerfacecolor='w', label='Eq Filter (Unfolding)')
-    plt.plot(ebn0_list, ber_data["systolic"], '-x', color=c_sys, linewidth=1.5, markersize=mk_sz, markerfacecolor='w', label='Eq Filter (Systolic)')
+    plt.plot(ebn0_list, ber_data["folding_lite"], '-v', color=c_fold, linewidth=1.5, markersize=mk_sz, markerfacecolor='w', label='Eq Filter (Folding Lite)')
+    plt.plot(ebn0_list, ber_data["unfolding_lite"], '-d', color=c_unfold, linewidth=1.5, markersize=mk_sz, markerfacecolor='w', label='Eq Filter (Unfolding Lite)')
+    plt.plot(ebn0_list, ber_data["systolic_lite"], '-x', color=c_sys, linewidth=1.5, markersize=mk_sz, markerfacecolor='w', label='Eq Filter (Systolic Lite)')
 
     # Add threshold lines
     plt.axhline(y=1e-6, color='r', linestyle='--', linewidth=1.5)
     plt.vlines(x=23, ymin=1e-7, ymax=1, color='g', linestyle='--', linewidth=1.5)
 
     plt.legend(loc='lower left', frameon=False)
-    plt.title('BER-Eb/N0 Performance', fontweight='bold', fontname='Times New Roman')
+    plt.title('BER-Eb/N0 Performance (Lite Data)', fontweight='bold', fontname='Times New Roman')
     plt.xlabel('Eb/N0 (dB)', fontname='Times New Roman')
     plt.ylabel('Bit Error Rate', fontname='Times New Roman')
     
@@ -221,7 +211,7 @@ def main():
     for label in (ax.get_xticklabels() + ax.get_yticklabels()):
         label.set_fontname('Times New Roman')
         
-    out_svg = os.path.join(args.out_dir, 'ber_performance.svg')
+    out_svg = os.path.join(args.out_dir, 'ber_performance_lite.svg')
     plt.savefig(out_svg, format='svg', bbox_inches='tight')
     print(f"Successfully generated plot: {out_svg}")
 
